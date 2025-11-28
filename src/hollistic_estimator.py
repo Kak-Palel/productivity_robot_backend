@@ -107,7 +107,23 @@ if __name__ == '__main__':
     # MediaPipe webcam loop but uses the HollisticEstimator.infer API and
     # draws normalized keypoints back onto the full-frame for visual check.
     cap = cv.VideoCapture(0)
-    est = HollisticEstimator(static_image_mode=False, model_complexity=1, enable_segmentation=False, refine_face_landmarks=False, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    est = HollisticEstimator(static_image_mode=False, model_complexity=2, enable_segmentation=False, refine_face_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+
+    def draw_all_pose_landmarks(image, pose_landmarks):
+        last_landmark = None
+        for landmark in pose_landmarks.landmark:
+            x = int(landmark.x * image.shape[1])
+            y = int(landmark.y * image.shape[0])
+            cv.circle(image, (x, y), 5, (0, 255, 0), -1)
+            # if last_landmark is not None:
+            #     last_x = int(last_landmark.x * image.shape[1])
+            #     last_y = int(last_landmark.y * image.shape[0])
+            #     cv.line(image, (last_x, last_y), (x, y), (255, 0, 0), 2)
+            # last_landmark = landmark
+        
+        return image
+
+
     try:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -120,6 +136,7 @@ if __name__ == '__main__':
             img_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
             img_rgb.flags.writeable = False
             results = est.holistic.process(img_rgb)
+            # results = est.infer(frame)
             img_rgb.flags.writeable = True
 
             # draw face landmarks
@@ -134,13 +151,17 @@ if __name__ == '__main__':
 
             # draw pose landmarks
             if results.pose_landmarks:
-                mp_drawing.draw_landmarks(
-                    frame,
-                    results.pose_landmarks,
-                    mp_holistic.POSE_CONNECTIONS,
-                    mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
-                    mp_drawing.DrawingSpec(color=(80,44,121), thickness=2, circle_radius=2),
-                )
+                print(results.pose_landmarks)
+                print("len:", len(results.pose_landmarks.landmark))
+                # mp_drawing.draw_landmarks(
+                #     frame,
+                #     results.pose_landmarks,
+                #     mp_holistic.POSE_CONNECTIONS,
+                #     mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
+                #     mp_drawing.DrawingSpec(color=(80,44,121), thickness=2, circle_radius=2),
+                # )
+
+                frame = draw_all_pose_landmarks(frame, results.pose_landmarks)
 
             # draw left/right hands
             if results.left_hand_landmarks:

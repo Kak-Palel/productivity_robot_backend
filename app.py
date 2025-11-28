@@ -10,7 +10,7 @@ import cv2 as cv
 import numpy as np
 import os
 
-CAMERA_PATH = "/dev/v4l/by-id/usb-Quanta_USB2.0_HD_UVC_WebCam_0x0001-video-index0"
+CAMERA_PATH = "/dev/v4l/by-id/usb-Web_Camera_Web_Camera_241015140801-video-index0"
 DETECTION_MODEL = "yolov8m.engine"
 
 if __name__ == '__main__':
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     emotion_clf = EmotionClassifier()
     # load posture classifier (optional)
     try:
-        posture_clf = PostureClassifierWrapper(model_path=os.path.join(os.path.dirname(__file__), 'model', 'posture_classifier.pth'))
+        posture_clf = PostureClassifierWrapper(model_path=os.path.join(os.path.dirname(__file__), 'model', 'posture_classifier_v7.pth'))
     except Exception as e:
         print('Posture classifier not available:', e)
         posture_clf = None
@@ -33,7 +33,11 @@ if __name__ == '__main__':
     mp_holistic = mp.solutions.holistic
 
     # cap = cv.VideoCapture(CAMERA_PATH, cv.CAP_V4L2)
-    cap = cv.VideoCapture("/home/olel/Projects/productivity_robot_backend/train/final_classifier/dataset/slacking_off/2025-11-06-175907.webm")
+    # cap = cv.VideoCapture(0)
+    # os.environ.setdefault("OPENCV_FFMPEG_READ_ATTEMPTS", "1000000")
+    cap = cv.VideoCapture("/home/olel/Projects/productivity_robot_backend/test.mp4")
+    # cap = cv.VideoCapture("/home/olel/Projects/productivity_robot_backend/train/final_classifier/dataset/locked_in/2025-11-06-175545.webm")
+    # cap = cv.VideoCapture("/home/olel/Projects/productivity_robot_backend/train/final_classifier/dataset/slacking_off/2025-11-06-175907.webm")
     if not cap.isOpened():
         print('Cannot open camera (index 0)')
         raise SystemExit(1)
@@ -164,7 +168,8 @@ if __name__ == '__main__':
                         prob = posture_clf.infer_from_landmarks(pose_kpts, face_kpts, bbox=(x1, y1, x2, y2), frame_idx=0, person_id=0)
                         label = 'working' if prob > 0.5 else 'slacking'
                         txt = f'{label}:{prob:.2f}'
-                        cv.putText(frame, txt, (x1, min(y2 + 20, frame.shape[0]-5)), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1)
+                        cv.rectangle(frame, (x1, min(y2 + 20, frame.shape[0]-5)), (x1 + cv.getTextSize(txt, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0][0], min(y2 + 20, frame.shape[0]-5) - 15), (0, 255, 0) if label == 'working' else (0, 0, 255), -1)
+                        cv.putText(frame, txt, (x1, min(y2 + 20, frame.shape[0]-5)), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
                 except Exception as e:
                     print('Posture classification failed:', e)
 

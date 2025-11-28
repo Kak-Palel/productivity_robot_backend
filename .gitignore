@@ -11,3 +11,7 @@ man_annotated.png
 src/man.png
 src/man_holistic_annotated.png
 *webm
+*.mp4
+*.jpg
+*.csv
+*.npz

@@ -6,21 +6,65 @@ import torch.nn as nn
 
 
 class PostureClassifierModel(nn.Module):
+    """Convolutional classifier that accepts a flat feature vector and
+    reshapes it into a square image-like tensor for CNN processing.
+
+    The model pads the input vector with zeros to the next square size
+    (side x side) where side = ceil(sqrt(input_size)). This keeps the
+    external API unchanged (accepts a flat feature vector) while using
+    convolutional feature extractors internally.
+    """
     def __init__(self, input_size):
         super().__init__()
-        self.model = nn.Sequential(
-            nn.Linear(input_size, 128),
+        # compute square side and padded size
+        side = int(np.ceil(np.sqrt(input_size)))
+        padded = side * side
+        self.input_size = input_size
+        self.side = side
+        self.padded = padded
+
+        # small convolutional stack
+        self.conv = nn.Sequential(
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.BatchNorm2d(16),
+            nn.MaxPool2d(2),
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(32),
+            nn.MaxPool2d(2),
+        )
+
+        # compute flattened conv output size (handle small sides)
+        conv_side = max(1, side // 4)
+        conv_features = 32 * conv_side * conv_side
+
+        self.head = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(conv_features, 128),
+            nn.ReLU(),
+            # nn.Dropout(0.3),
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(64, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
-        return self.model(x)
+        # x: (B, input_size)
+        if x.dim() == 1:
+            x = x.unsqueeze(0)
+        B = x.shape[0]
+        if x.shape[1] < self.padded:
+            pad = x.new_zeros((B, self.padded - x.shape[1]))
+            x = torch.cat([x, pad], dim=1)
+        x = x.view(B, 1, self.side, self.side)
+        x = self.conv(x)
+        x = self.head(x)
+        return x
 
 
 class PostureClassifierWrapper:
@@ -132,5 +176,6 @@ class PostureClassifierWrapper:
 
         pose_flat = np.asarray(pose_kpts, dtype=np.float32).reshape(-1)
         face_flat = np.asarray(face_kpts, dtype=np.float32).reshape(-1)
-        row = np.concatenate((np.array([frame_idx, person_id, x1, y1, x2, y2], dtype=np.float32), pose_flat, face_flat))
+        # row = np.concatenate((np.array([frame_idx, person_id, x1, y1, x2, y2], dtype=np.float32), pose_flat, face_flat))
+        row = np.concatenate((np.array([frame_idx, person_id], dtype=np.float32), pose_flat))
         return self.infer_from_features(row)

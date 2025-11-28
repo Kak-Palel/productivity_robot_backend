@@ -27,7 +27,7 @@ for label in labels:
     if not os.path.isdir(label_dir):
         continue
 
-    video_files = [f for f in os.listdir(label_dir) if f.endswith('.webm')]
+    video_files = [f for f in os.listdir(label_dir) if f.endswith('.mp4')]
     for video_file in video_files:
         video_path = os.path.join(label_dir, video_file)
         print(f'Processing {video_path} with label {label}')
@@ -39,11 +39,12 @@ for label in labels:
         # build header: video,frame,person_id,x1,y1,x2,y2, then pose (33*2) and face (468*2)
         pose_n = 33
         face_n = 468
-        header = ['video', 'frame', 'person_id', 'x1', 'y1', 'x2', 'y2']
+        header = ['video', 'frame', 'person_id']
+        # header = ['video', 'frame', 'person_id', 'x1', 'y1', 'x2', 'y2']
         for i in range(pose_n):
             header += [f'pose_{i}_x', f'pose_{i}_y']
-        for i in range(face_n):
-            header += [f'face_{i}_x', f'face_{i}_y']
+        # for i in range(face_n):
+        #     header += [f'face_{i}_x', f'face_{i}_y']
 
         cap = cv.VideoCapture(video_path)
         if not cap.isOpened():
@@ -107,7 +108,8 @@ for label in labels:
                     # extract pose landmarks (33) normalized to crop
                     if res and res.pose_landmarks:
                         lm_pose = res.pose_landmarks.landmark
-                        pose_kpts = np.array([[(p.x, p.y) for p in lm_pose]], dtype=np.float32)[0]  # (33,2)
+                        pose_kpts = np.array([(p.x, p.y) for p in lm_pose], dtype=np.float32)  # (33,2)
+                        
                         pose_kpts = np.clip(pose_kpts, 0.0, 1.0)
                     else:
                         pose_kpts = np.zeros((pose_n, 2), dtype=np.float32)
@@ -121,11 +123,12 @@ for label in labels:
                         face_kpts = np.zeros((face_n, 2), dtype=np.float32)
 
                     # Build row: video, frame, person_id, bbox, then flattened kpts
-                    row = [video_file, frame_idx, person_id, x1, y1, x2, y2]
+                    # row = [video_file, frame_idx, person_id, x1, y1, x2, y2]
+                    row = [video_file, frame_idx, person_id]
                     # Pose and face are already normalized relative to the bbox (crop resized to 1x1),
                     # convert to float32 and flatten
                     row += [float(x) for tup in pose_kpts for x in tup]
-                    row += [float(x) for tup in face_kpts for x in tup]
+                    # row += [float(x) for tup in face_kpts for x in tup]
 
                     writer.writerow(row)
                     person_id += 1
