@@ -110,6 +110,9 @@ val_loader = DataLoader(val_dataset, batch_size=64)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 input_size = dataset.X.shape[1]
+# print(f'Input feature size: {input_size}')
+# exit()
+
 model = PostureClassifierModel(input_size).to(device)
 criterion = nn.BCELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)

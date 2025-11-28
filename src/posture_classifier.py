@@ -102,6 +102,8 @@ class PostureClassifierWrapper:
 
         # build model with inferred input size
         input_size = int(self.mean_.shape[0])
+        # print(f'Posture classifier input size: {input_size}')
+        # exit()
         self.model = PostureClassifierModel(input_size).to(self.device)
 
         if not self.model_path.exists():
